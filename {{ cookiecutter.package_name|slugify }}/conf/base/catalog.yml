@@ -1,0 +1,22 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://kedro.readthedocs.io/en/stable/05_data/01_data_catalog.html
+#
+# We support interacting with a variety of data stores including local file systems, cloud, network and HDFS
+#
+# This is a data set used by the example pipeline provided with the project
+# template. Please feel free to remove it once you remove the example pipeline.
+
+example_iris_data:
+  type: pandas.CSVDataSet
+  filepath: data/base/01_raw/iris.csv
+
+example_model:
+  type: pickle.PickleDataSet
+  filepath: data/${data_folder}/06_models/example_model.pkl
+  versioned: True
+
+example_metrics:
+  type: tracking.MetricsDataSet
+  filepath: data/${data_folder}/08_reporting/metrics.json

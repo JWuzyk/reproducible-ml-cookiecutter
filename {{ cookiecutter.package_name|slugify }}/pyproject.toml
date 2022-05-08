@@ -12,6 +12,11 @@ authors = ["{{ cookiecutter.author_name }} <{{ cookiecutter.author_email }}>"]
 readme = "README.md"
 repository = "{{ cookiecutter.package_url }}"
 
+[tool.kedro]
+package_name = "{{ cookiecutter.package_name|slugify|replace("-", "_") }}_pipelines"
+project_name = "{{ cookiecutter.package_name|slugify|replace("-", "_") }}_pipelines"
+project_version = "0.18"
+
 # https://commitizen-tools.github.io/commitizen/config/
 [tool.commitizen]
 bump_message = "bump(release): v$current_version → v$new_version"
@@ -52,6 +57,13 @@ typer = "^0.4.0"
 {%- if cookiecutter.with_fastapi_api|int %}
 uvicorn = { extras = ["standard"], version = "^0.16.0" }
 {%- endif %}
+kedro = ">=0.18" 
+kedro-viz = ">=4.4"
+boto3 = ">=1.0.0"
+dvc = { extras = ["s3"], version = ">=2.0.0" }
+numpy = "^1.22.3"
+joblib = "^1.1.0"
+
 
 # https://python-poetry.org/docs/master/managing-dependencies/
 # TODO: Split in `tool.poetry.group.dev` and `tool.poetry.group.test` when Poetry 1.2.0 is released.
