@@ -1,0 +1,6 @@
+{%if cookiecutter.dvc_remote_url %}
+[core]
+    remote = defualt
+['remote "defualt"']
+    url = {{cookiecutter.dvc_remote_url}}
+{% endif %}
