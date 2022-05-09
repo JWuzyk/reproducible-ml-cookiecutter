@@ -1,7 +1,6 @@
 """Test that the pipeline runs."""
 from pathlib import Path
 
-import pytest
 from kedro.framework.project import configure_project
 from kedro.framework.session import KedroSession
 
