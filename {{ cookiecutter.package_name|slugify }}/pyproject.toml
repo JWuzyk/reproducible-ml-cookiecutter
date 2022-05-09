@@ -59,8 +59,7 @@ uvicorn = { extras = ["standard"], version = "^0.16.0" }
 {%- endif %}
 kedro = ">=0.18" 
 kedro-viz = ">=4.4"
-boto3 = ">=1.0.0"
-dvc = { extras = ["s3"], version = ">=2.0.0" }
+dvc = { extras = ["azure"]}
 numpy = "^1.22.3"
 joblib = "^1.1.0"
 
