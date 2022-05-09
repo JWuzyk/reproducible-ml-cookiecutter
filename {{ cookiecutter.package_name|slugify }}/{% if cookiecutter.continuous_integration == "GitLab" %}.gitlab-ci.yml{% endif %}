@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - train
   - {% if cookiecutter.with_fastapi_api|int or cookiecutter.with_streamlit_app|int %}deploy{% else %}publish{% endif %}
 
 # Base Docker build script.
@@ -86,6 +87,7 @@ Test:
     POETRY_HTTP_BASIC_{{ cookiecutter.private_package_repository_name|upper|replace("-", "_") }}_PASSWORD: $CI_JOB_TOKEN
   {%- endif %}
   script:
+    - dvc pull
     - poetry install --no-interaction  # TODO: Add `--only test` when Poetry 1.2.0 is released.
     - poe lint
     - poe test
@@ -141,3 +143,70 @@ Deploy ({{ environment }}):
   {%- endif %}
 {% endfor %}
 {%- endif %}
+
+
+#---------------------------------------- Train Pipeline-----------------------------------------
+
+.train:
+  image: $CI_REGISTRY_IMAGE/ci:$CI_IMAGE_SHA
+  variables:
+    # Git
+    GIT_AUTHOR_NAME: $GITLAB_USER_NAME
+    GIT_AUTHOR_EMAIL: $GITLAB_USER_EMAIL
+    GIT_COMMITTER_NAME: $GITLAB_USER_NAME
+    GIT_COMMITTER_EMAIL: $GITLAB_USER_EMAIL
+
+    # Poetry
+    POETRY_HTTP_BASIC_PRIVATE_USERNAME: gitlab-ci-token
+    POETRY_HTTP_BASIC_PRIVATE_PASSWORD: $CI_JOB_TOKEN
+
+    # Kedro
+    KEDRO_ENV: $KEDRO_ENV
+
+  before_script:
+    # Install local package
+    - poetry install --no-interaction
+
+      # Setup git access
+    - |
+      eval $(ssh-agent -s)
+      mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      chmod 600 $DEPLOY_KEY && ssh-add $DEPLOY_KEY
+      ssh-keyscan gitlab.com >> ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+    - git checkout $CI_COMMIT_BRANCH
+
+    # pull data 
+    - dvc pull -f 
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - .mypy_cache/
+      - .pytest_cache/
+      - /root/.cache/pypoetry
+      - ./data
+
+# Train a new model
+Train Model:
+  stage: train
+  extends: .train
+  variables:
+    KEDRO_ENV: ci
+    MODEL_NAME: example_model.pkl
+  script:
+    - kedro run
+
+    # Upload latest models + model meta to backing store
+    - |
+      NEW_MODEL_VERSION=$(ls data/ci/06_models/$MODEL_NAME | sort -k1,4 -k6,7 -k9,10 -k12,13 -k15,16 -k18,19 -k21,23 | tail -1)
+      echo "Saving new model - $NEW_MODEL_VERSION"
+      dvc add data/ci/06_models data/ci/08_reporting
+      dvc push
+      git add data/ci/06_models.dvc data/ci/08_reporting.dvc
+      git commit -m "Added new models - $NEW_MODEL_VERSION [ci skip]"
+      git push "git@gitlab.com:${CI_PROJECT_PATH}.git"
+
+    # Save trained model for deploy step
+    - echo "NEW_MODEL_VERSION=$NEW_MODEL_VERSION" > model.env
+  artifacts:
+    reports:
+      dotenv: model.env
